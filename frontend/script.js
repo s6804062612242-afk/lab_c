@@ -1,137 +1,138 @@
-// เก็บค่า id ของโจทย์ปัจจุบันไว้ เพื่อส่งไปให้ backend ตรวจถูกข้อ
-let currentProblemIndex = 0;
+const editor = document.getElementById('editor');
+const stdinEl = document.getElementById('stdin');
+const consoleEl = document.getElementById('console');
+const statusBadge = document.getElementById('statusBadge');
+const runBtn = document.getElementById('runBtn');
+const submitBtn = document.getElementById('submitBtn');
+const sampleBtn = document.getElementById('sampleBtn');
+const clearBtn = document.getElementById('clearBtn');
+const themeToggle = document.getElementById('themeToggle');
 
-const problems = [
-  {
-    title: 'ตัดเกรดstruct pro',
-    statement: 'เเจกF',
-    input: '1 2',
-    output: '3'
-  },
+const sampleCode = `#include <stdio.h>
 
-];
-
-function loadProblem(i) {
-  currentProblemIndex = i;
-  const p = problems[i];
-  document.getElementById('probTitle').textContent = p.title;
-  document.getElementById('probStatement').textContent = p.statement;
-  document.getElementById('probInput').textContent = p.input;
-  document.getElementById('probOutput').textContent = p.output;
-  document.getElementById('editor').value = sampleStarter(document.getElementById('lang').value);
-  document.getElementById('console').textContent = '';
-}
-
-function sampleStarter(lang) {
-  if (lang === 'Python') return 'a,b = map(int, input().split())\nprint(a+b)';
-  if (lang === 'JavaScript') return 'const fs = require("fs");\nconst data = "1 2".trim().split(/\\s+/).map(Number);\nconsole.log(data[0] + data[1]);';
-  return '// ใส่โค้ด C/C++ ที่นี่\n#include <stdio.h>\n\nint main() {\n    return 0;\n}';
-}
-
-// ---------------------------------------------------------
-// 1. ปุ่มรัน (ทดสอบกับ Input ตัวอย่าง)
-// ---------------------------------------------------------
-document.getElementById('runBtn').addEventListener('click', async () => {
-  const lang = document.getElementById('lang').value;
-  const code = document.getElementById('editor').value;
-  const consoleEl = document.getElementById('console');
-  
-  // ดึง Input จากหน้าเว็บส่งไปเทสต์
-  const sampleInput = document.getElementById('probInput').textContent; 
-
-  consoleEl.textContent = 'กำลังรันโค้ด... (รอสักครู่)';
-
-  try {
-    // แก้ URL เป็น Backend ของคุณ (เช่น http://localhost:3000/api/run)
-    const response = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code, language: lang, input: sampleInput })
-    });
-    
-    const result = await response.json();
-    consoleEl.textContent = `ผลลัพธ์ที่ได้:\n${result.output || result.error}`;
-  } catch (err) {
-    consoleEl.textContent = '❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+int main() {
+  int a, b;
+  if (scanf("%d %d", &a, &b) == 2) {
+    printf("%d\\n", a + b);
   }
-});
+  return 0;
+}
+`;
 
-// ---------------------------------------------------------
-// 2. ปุ่มส่ง (ส่งไปตรวจกับ Test Cases ลับทั้งหมด)
-// ---------------------------------------------------------
-document.getElementById('submitBtn').addEventListener('click', async () => {
-  const lang = document.getElementById('lang').value;
-  const code = document.getElementById('editor').value;
-  const consoleEl = document.getElementById('console');
-  
-  consoleEl.textContent = 'กำลังส่งโค้ดไปตรวจ...';
+function setStatus(text, tone = 'neutral') {
+  const tones = {
+    neutral: 'bg-slate-100 text-slate-600',
+    loading: 'bg-amber-100 text-amber-700',
+    success: 'bg-emerald-100 text-emerald-700',
+    error: 'bg-rose-100 text-rose-700',
+  };
+  statusBadge.className = `px-2.5 py-1 rounded-md text-sm ${tones[tone] || tones.neutral}`;
+  statusBadge.textContent = text;
+}
+
+function fillSample() {
+  editor.value = sampleCode;
+  stdinEl.value = '1 2';
+  consoleEl.textContent = '';
+}
+
+async function requestJSON(url, payload) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.details || data.error || 'Request failed');
+  }
+  return data;
+}
+
+async function runCode() {
+  const code = editor.value.trim();
+  const input = stdinEl.value;
+
+  if (!code) {
+    setStatus('กรุณาใส่โค้ดก่อนรัน', 'error');
+    consoleEl.textContent = 'ยังไม่มีโค้ด';
+    return;
+  }
+
+  runBtn.disabled = true;
+  submitBtn.disabled = true;
+  setStatus('กำลังรัน...', 'loading');
+  consoleEl.textContent = '';
 
   try {
-    // แก้ URL เป็น Backend ของคุณ
-    const response = await fetch('/api/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        problemId: currentProblemIndex, // ส่ง ID ไปให้ Backend รู้ว่าต้องตรวจข้อไหน
-        code: code, 
-        language: lang 
-      })
+    const result = await requestJSON('/api/run', { language: 'C', code, input });
+    consoleEl.textContent = result.output || '(ไม่มี output)';
+    setStatus('รันสำเร็จ', 'success');
+  } catch (error) {
+    consoleEl.textContent = String(error.message || error);
+    setStatus('รันไม่สำเร็จ', 'error');
+  } finally {
+    runBtn.disabled = false;
+    submitBtn.disabled = false;
+  }
+}
+
+async function submitCode() {
+  const code = editor.value.trim();
+
+  if (!code) {
+    setStatus('กรุณาใส่โค้ดก่อนส่ง', 'error');
+    consoleEl.textContent = 'ยังไม่มีโค้ด';
+    return;
+  }
+
+  runBtn.disabled = true;
+  submitBtn.disabled = true;
+  setStatus('กำลังตรวจคำตอบ...', 'loading');
+  consoleEl.textContent = '';
+
+  try {
+    const result = await requestJSON('/api/submit', {
+      language: 'C',
+      problemId: 0,
+      code,
     });
-    
-    const result = await response.json();
-    
-    // สมมติว่า Backend ตอบกลับมาเป็น { status: 'Accepted', executionTime: '12ms' }
+
     if (result.status === 'Accepted') {
-      consoleEl.textContent = `✅ ผ่าน! สถานะ: ${result.status} (เวลา: ${result.executionTime})`;
+      consoleEl.textContent = `Accepted (${result.executionTime})`;
+      setStatus('ผ่านทุกเคส', 'success');
     } else {
-      consoleEl.textContent = `❌ ไม่ผ่าน! สถานะ: ${result.status}\nรายละเอียด: ${result.details || ''}`;
+      const detail = result.details || `Expected: ${result.expected || '-'} | Got: ${result.got || '-'}`;
+      consoleEl.textContent = `${result.status}\n${detail}`;
+      setStatus('ไม่ผ่าน', 'error');
     }
-  } catch (err) {
-    consoleEl.textContent = '❌ เกิดข้อผิดพลาดในการส่งข้อมูล';
+  } catch (error) {
+    consoleEl.textContent = String(error.message || error);
+    setStatus('ส่งไม่สำเร็จ', 'error');
+  } finally {
+    runBtn.disabled = false;
+    submitBtn.disabled = false;
   }
-});
-
-document.getElementById('resetBtn').addEventListener('click', () => {
-  document.getElementById('editor').value = sampleStarter(document.getElementById('lang').value);
-  document.getElementById('console').textContent = '';
-});
-
-document.getElementById('lang').addEventListener('change', (e) => {
-  document.getElementById('editor').value = sampleStarter(e.target.value);
-});
-
-function copyLink() {
-  navigator.clipboard.writeText(location.href).then(() => alert('ลิงก์คัดลอกแล้ว'));
 }
 
-loadProblem(0);
-
-// Dark mode toggle
-const darkToggle = document.getElementById('darkToggle');
-darkToggle.addEventListener('click', () => {
-  document.documentElement.classList.toggle('dark');
-  document.body.classList.toggle('bg-gray-900');
-  document.body.classList.toggle('text-white');
-});
-
-// ---------------------------------------------------------
-// 3. Login Section
-// ---------------------------------------------------------
-// สำหรับระบบ Authentication แนะนำให้ใช้เครื่องมืออย่าง Supabase
-// เพราะจัดการเรื่อง Auth และ Session บน Client-side ได้ง่ายมาก
-/*
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'YOUR_SUPABASE_URL'
-const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
-  })
-  if (error) console.error("Login failed:", error)
-  else console.log("Logged in!", data)
+function clearAll() {
+  editor.value = '';
+  stdinEl.value = '';
+  consoleEl.textContent = '';
+  setStatus('พร้อมใช้งาน', 'neutral');
 }
-*/
+
+function toggleTheme() {
+  const body = document.body;
+  body.classList.toggle('bg-slate-950');
+  body.classList.toggle('text-slate-100');
+}
+
+runBtn.addEventListener('click', runCode);
+submitBtn.addEventListener('click', submitCode);
+sampleBtn.addEventListener('click', fillSample);
+clearBtn.addEventListener('click', clearAll);
+themeToggle.addEventListener('click', toggleTheme);
+
+fillSample();
+setStatus('พร้อมใช้งาน', 'neutral');

@@ -3,94 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>โจทย์การแข่งขันเขียนโค้ด — Demo</title>
+  <title>C Docker Runner</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="script.js" defer></script>
+  <script src="./script.js" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans">
-  <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4">
-    <div class="container mx-auto flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Problem by IBEs</h1>
-      <div class="flex items-center gap-3">
-        <button id="darkToggle" class="bg-white/20 px-3 py-1 rounded">โหมดมืด</button>
-        <a href="#" class="text-sm bg-white/20 px-3 py-1 rounded">เข้าสู่ระบบ</a>
+<body class="bg-slate-100 min-h-screen text-slate-900">
+  <header class="bg-gradient-to-r from-sky-600 to-indigo-700 text-white">
+    <div class="max-w-6xl mx-auto px-4 py-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">C Code Runner</h1>
+        <p class="text-sm text-white/80">คอมไพล์และรันด้วย Docker บนเซิร์ฟเวอร์</p>
       </div>
+      <button id="themeToggle" class="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30">Dark mode</button>
     </div>
   </header>
 
-  <div class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-    <aside class="lg:col-span-1 bg-white rounded shadow p-4">
-      <div class="text-sm text-gray-500 mb-3">โจทย์ล่าสุด</div>
-      <ul class="space-y-2">
-        <li class="p-2 rounded hover:bg-gray-50 cursor-pointer" onclick="loadProblem(0)"><div class="font-medium">ตัดเกรดstruct pro</div><div class="text-xs text-gray-500">ง่าย • 1s 512MB</div></li>
-      
-      </ul>
-    </aside>
-
-    <main class="lg:col-span-3 space-y-6">
-      <div class="bg-white rounded shadow p-6">
-        <div class="flex justify-between items-start">
-          <div>
-            <h2 id="probTitle" class="text-xl font-bold">ตัดเกรดstruct pro</h2>
-            <div class="text-sm text-gray-500">เวลา: 1s • หน่วยความจำ: 512MB</div>
-          </div>
-          <div class="flex gap-2">
-            <span class="px-3 py-1 rounded bg-green-100 text-green-800 text-sm">ง่าย</span>
-            <button class="px-3 py-1 rounded bg-blue-600 text-white" onclick="copyLink()">แชร์</button>
-          </div>
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-600">Language:</span>
+          <span class="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-700 text-sm font-medium">C (gcc in Docker)</span>
         </div>
+        <span id="statusBadge" class="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-sm">พร้อมใช้งาน</span>
+      </div>
 
-        <hr class="my-4">
+      <label for="editor" class="block text-sm font-medium mb-2">โค้ด C</label>
+      <textarea id="editor" class="w-full h-72 p-4 rounded-lg border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
 
-        <section>
-          <h3 class="font-semibold mb-2">คำอธิบาย</h3>
-          <p id="probStatement" class="text-gray-700 leading-relaxed">เเจกF</p>
-        </section>
-
-        <div class="grid md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <h4 class="font-medium">อินพุต</h4>
-            <pre id="probInput" class="bg-gray-50 p-4 rounded text-sm text-gray-700">1 2</pre>
-          </div>
-          <div>
-            <h4 class="font-medium">เอาต์พุต</h4>
-            <pre id="probOutput" class="bg-gray-50 p-4 rounded text-sm text-gray-700">3</pre>
-          </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label for="stdin" class="block text-sm font-medium mb-2">stdin (อินพุต)</label>
+          <textarea id="stdin" class="w-full h-28 p-3 rounded-lg border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="เช่น: 1 2"></textarea>
         </div>
-
-        <div class="mt-4">
-          <h4 class="font-medium">ตัวอย่าง</h4>
-          <pre class="bg-black text-white p-4 rounded text-sm">อินพุต:
-1 2
-
-เอาต์พุต:
-3</pre>
+        <div>
+          <label for="console" class="block text-sm font-medium mb-2">ผลลัพธ์</label>
+          <pre id="console" class="h-28 p-3 rounded-lg bg-slate-950 text-green-300 text-sm overflow-auto"></pre>
         </div>
       </div>
 
-      <div class="bg-white rounded shadow p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold">โค้ดของคุณ</h3>
-          <div class="text-sm text-gray-500">ภาษา: <select id="lang" class="border rounded px-2 py-1"><option>C</option><option>JavaScript</option><option>C++</option></select></div>
-        </div>
-
-        <textarea id="editor" class="w-full h-48 p-4 border rounded font-mono text-sm" placeholder="# เขียนโค้ดที่นี่\n"></textarea>
-
-        <div class="flex gap-3 mt-4">
-          <button id="runBtn" class="px-4 py-2 bg-indigo-600 text-white rounded">รัน (Local)</button>
-          <button id="submitBtn" class="px-4 py-2 bg-green-600 text-white rounded">ส่ง</button>
-          <button id="resetBtn" class="px-4 py-2 bg-gray-200 rounded">ล้าง</button>
-        </div>
-
-        <div class="mt-4">
-          <h4 class="font-medium">ผลลัพธ์</h4>
-          <pre id="console" class="bg-gray-900 text-green-200 p-4 rounded h-32 overflow-auto"></pre>
-        </div>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button id="runBtn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Run</button>
+        <button id="submitBtn" class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Submit</button>
+        <button id="sampleBtn" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300">Sample code</button>
+        <button id="clearBtn" class="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300">Clear</button>
       </div>
-
-    </main>
-  </div>
-
-
+    </section>
+  </main>
 </body>
 </html>
